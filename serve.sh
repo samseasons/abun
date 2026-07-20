@@ -19,7 +19,7 @@ preparea() {
         file='/x.html'
         type='text/html'
     fi
-    echo $'HTTP/1.\ncontent-type:'$type$'\n\n'"$(<"$folder$file")"
+    echo $'HTTP/1.\ncontent-type:'$type$'\n\n'"$(tr -d '\0' < "$folder$file")"
 }
 
 prepareb() {
@@ -35,7 +35,7 @@ prepareb() {
                 file='/x.html'
                 type='text/html'
             fi
-            : $(echo $'HTTP/1.\ncontent-type:'$type$'\n\n'"$(<"$folder$file")" | netcat -l -w 0 $port)
+            : $(echo $'HTTP/1.\ncontent-type:'$type$'\n\n'"$(tr -d '\0' < "$folder$file")" | netcat -l -w 0 $port)
         fi
     done
 }
@@ -43,10 +43,10 @@ prepareb() {
 serve() {
     folder=${1:-a}
     port=${2:-1234}
-    if test "$(which socat)"; then
+    if test "$(type -t socat)"; then
         echo 'localhost:'$port
-        socat TCP-LISTEN:$port,fork,reuseaddr EXEC:"$SHELL ${BASH_SOURCE[0]} \'$folder\' $port a"
-    elif test "$(which netcat)"; then
+        : $(socat tcp-l:$port,fork,reuseaddr exec:"$SHELL ${BASH_SOURCE[0]} \'$folder\' $port a" 2>&1)
+    elif test "$(type -t netcat)"; then
         echo 'localhost:'$port
         netcat -6 -k -l -w 1 $port | $SHELL ${BASH_SOURCE[0]} "$folder" $port b
     else
